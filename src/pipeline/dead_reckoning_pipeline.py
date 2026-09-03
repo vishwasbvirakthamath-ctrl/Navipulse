@@ -111,8 +111,13 @@ class DeadReckoningPipeline:
                 self.eskf.update_nhc()
 
             # Apply AI Forward Speed update if model and window are ready
+            ai_speed = None
             if self.ai_speed_estimator is not None and self.buffer.is_ready():
-                ai_speed = self.ai_speed_estimator(self.buffer.as_array())
+                yaw_rad = float(self.eskf.euler_angles[2])
+                try:
+                    ai_speed = self.ai_speed_estimator(self.buffer.as_array(), yaw_rad)
+                except TypeError:
+                    ai_speed = self.ai_speed_estimator(self.buffer.as_array())
                 if ai_speed is not None and ai_speed >= 0.0:
                     self.eskf.update_ai_speed(ai_speed)
 
@@ -137,6 +142,7 @@ class DeadReckoningPipeline:
             "pitch_deg": pitch_deg,
             "mode": self.current_mode.value,
             "is_stationary": is_stationary,
+            "ai_speed_mps": ai_speed if self.current_mode == NavigationMode.DEAD_RECKONING else None,
             "total_distance_m": self.total_distance,
             "outage_distance_m": self.outage_distance_m,
             "outage_duration_s": self.outage_duration_s,

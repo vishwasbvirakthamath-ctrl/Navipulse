@@ -16,6 +16,7 @@ from pydantic import BaseModel
 import numpy as np
 
 from src.pipeline.dead_reckoning_pipeline import DeadReckoningPipeline, NavigationMode
+from src.pipeline.ai_speed_adapter import AISpeedEstimator
 from src.simulation.vehicle_simulator import VehicleSimulator
 from src.data.iovnbd_loader import IOVNBDDataset, create_sample_iovnbd_csv, local_enu_to_lat_lon
 
@@ -68,7 +69,12 @@ class StreamingManager:
 
     def __init__(self):
         self.clients: Set[WebSocket] = set()
-        self.pipeline = DeadReckoningPipeline(sample_hz=50.0, enable_nhc=True, enable_zupt=True)
+        self.ai_estimator = AISpeedEstimator()
+        self.pipeline = DeadReckoningPipeline(
+            sample_hz=50.0,
+            enable_nhc=True,
+            enable_zupt=True,
+        )
         self.sim = VehicleSimulator(sample_hz=50.0, seed=42)
         self.is_streaming = False
         self.force_gnss_outage = False
@@ -121,7 +127,11 @@ class StreamingManager:
                 init_yaw=init_yaw,
             )
         else:
-            self.pipeline = DeadReckoningPipeline(sample_hz=50.0, enable_nhc=True, enable_zupt=True)
+            self.pipeline = DeadReckoningPipeline(
+                sample_hz=50.0,
+                enable_nhc=True,
+                enable_zupt=True,
+            )
         self.current_step = 0
         self.force_gnss_outage = False
         await self.broadcast({"type": "RESET"})
@@ -148,12 +158,20 @@ class StreamingManager:
                 init_yaw=init_yaw,
             )
         else:
-            self.pipeline = DeadReckoningPipeline(sample_hz=50.0, enable_nhc=True, enable_zupt=True)
+            self.pipeline = DeadReckoningPipeline(
+                sample_hz=50.0,
+                enable_nhc=True,
+                enable_zupt=True,
+            )
         self.current_step = 0
 
     def clear_custom_path(self):
         self.sim.clear_custom_path()
-        self.pipeline = DeadReckoningPipeline(sample_hz=50.0, enable_nhc=True, enable_zupt=True)
+        self.pipeline = DeadReckoningPipeline(
+            sample_hz=50.0,
+            enable_nhc=True,
+            enable_zupt=True,
+        )
         self.current_step = 0
 
     async def run_stream_loop(self):
@@ -249,6 +267,7 @@ class StreamingManager:
                 "latency_ms": round(state["latency_ms"], 2),
                 "is_stationary": bool(state["is_stationary"]),
                 "forced_outage": self.force_gnss_outage,
+                "ai_speed_kmh": round(state["ai_speed_mps"] * 3.6, 1) if state.get("ai_speed_mps") is not None else None,
             }
 
             await self.broadcast(packet)

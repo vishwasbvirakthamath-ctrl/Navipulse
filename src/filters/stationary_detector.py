@@ -59,6 +59,10 @@ class StationaryDetector:
         accels = np.array(self.accel_buffer)  # shape (N, 3)
         gyros = np.array(self.gyro_buffer)    # shape (N, 3)
 
+        # Compute mean acceleration and net dynamic acceleration (excluding 1G gravity)
+        mean_accel = np.mean(accels, axis=0)
+        net_dynamic_accel = abs(np.linalg.norm(mean_accel) - 9.80665)
+
         # Compute variance of acceleration magnitude
         accel_norms = np.linalg.norm(accels, axis=1)
         accel_var = np.var(accel_norms)
@@ -67,8 +71,12 @@ class StationaryDetector:
         gyro_norms = np.linalg.norm(gyros, axis=1)
         mean_gyro_norm = np.mean(gyro_norms)
 
-        # Condition for stationary
-        stationary_condition = (accel_var < self.accel_var_thresh) and (mean_gyro_norm < self.gyro_norm_thresh)
+        # Vehicle is stationary ONLY if not rotating, no vibration, and no net linear acceleration
+        stationary_condition = (
+            (accel_var < self.accel_var_thresh)
+            and (mean_gyro_norm < self.gyro_norm_thresh)
+            and (net_dynamic_accel < 0.25)
+        )
 
         if stationary_condition:
             self.consecutive_count += 1

@@ -12,7 +12,7 @@ from utils import extract_rolling_features
 def train_production_idr_model():
     print("=== Step 1: Initializing IO-VNBD AI Pipeline ===")
     
-    data_filename = 'cleaned_data.csv'
+    data_filename = "C:\Users\Vishwas BVM\Desktop\SIH\S-M.txt"
     
     try:
         df = pd.read_csv(data_filename)
